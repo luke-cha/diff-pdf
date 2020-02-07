@@ -1,7 +1,7 @@
 import sys
 import os
+import argparse
 from io import StringIO
-
 from pdfminer.converter import TextConverter, PDFConverter, PDFPageAggregator
 from pdfminer.layout import LTTextBox, LAParams
 from pdfminer.layout import LTTextLine
@@ -22,9 +22,8 @@ class PdfToText(object):
         rsrcmgr = PDFResourceManager()
 
         retstr = StringIO()
-        codec = 'utf-8'
         laparams = LAParams()
-        device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+        device = TextConverter(rsrcmgr, retstr, laparams=laparams)
         fp = open(path, 'rb')
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         password = ""
@@ -84,11 +83,10 @@ class PdfToText(object):
         out = StringIO()
 
         layoutmode = 'normal'
-        codec = 'utf-8'
         scale = 1.3
         fontscale = 1
 
-        html_coverter = HTMLPrivateConverter(rsrcmgr, out, codec=codec, scale=scale,
+        html_coverter = HTMLPrivateConverter(rsrcmgr, out, scale=scale,
                                              layoutmode=layoutmode, laparams=laparams, fontscale=fontscale,
                                              imagewriter=None, header_text=header_text, x_margin=x_margin)
         interpreter = PDFPageInterpreter(rsrcmgr, device)
@@ -111,7 +109,6 @@ class PdfToText(object):
                                             item.height,
                                             item.get_writing_mode())
 
-                    # html_coverter._ffont = ('AllAndNone', item.font)
                     for child in item:
                         if isinstance(child, LTTextLine):
                             self.compare_textline(child, compare_page, html_coverter)
@@ -121,7 +118,6 @@ class PdfToText(object):
 
         fp.close()
         device.close()
-        # html_coverter.close()
         retstr.close()
 
         return out.getvalue()
@@ -130,8 +126,6 @@ class PdfToText(object):
         comp_result = True
         for comp_textline in compare_page['textline']:
             if child.x0 - 0.2 < comp_textline.x0 and comp_textline.x0 < child.x0 + 0.2 and child.y1 - 0.2 < comp_textline.y1 and comp_textline.y1 < child.y1 + 0.2:
-                # self._ffont = (child._objs[0].fontname, child._objs[0].size)
-                # print self._ffont
                 if child.get_text() != comp_textline.get_text():
                     html_coverter.put_text_invalid(child.get_text(), child._objs[0].fontname, child._objs[0].size)
                 else:
@@ -141,8 +135,6 @@ class PdfToText(object):
                 break
 
         if comp_result:
-            # self._ffont = (child._objs[0].fontname, child._objs[0].size)
-            # print self._ffont
             html_coverter.put_text_invalid(child.get_text(), child._objs[0].fontname, child._objs[0].size)
 
     def convert_list(self, obj):
@@ -155,7 +147,6 @@ class PdfToText(object):
 ##  HTMLConverter
 class HTMLPrivateConverter(PDFConverter):
     RECT_COLORS = {
-        # 'char': 'green',
         'figure': 'yellow',
         'textline': 'magenta',
         'textbox': 'cyan',
@@ -169,7 +160,7 @@ class HTMLPrivateConverter(PDFConverter):
         'char': 'black',
     }
 
-    def __init__(self, rsrcmgr, outfp, codec='utf-8', pageno=1, laparams=None,
+    def __init__(self, rsrcmgr, outfp, pageno=1, laparams=None,
                  scale=1, fontscale=1.0, layoutmode='normal', showpageno=True,
                  pagemargin=50, imagewriter=None, header_text='', x_margin=0,
                  rect_colors={'curve': 'black', 'page': 'gray'},
@@ -201,9 +192,6 @@ class HTMLPrivateConverter(PDFConverter):
         return
 
     def write_header(self):
-        # self.write('<html><head>\n')
-        # self.write('<meta http-equiv="Content-Type" content="text/html; charset=%s">\n' % self.codec)
-        # self.write('</head><body>\n')
         if self.x_margin != 10:
             self.write('<div><span style="position:absolute; color:%s; left:%dpx; top:%dpx; font-size:%dpx;">' %
                        (1, self.x_margin + 200, 0, 30 * self.scale * 1))
@@ -275,8 +263,6 @@ class HTMLPrivateConverter(PDFConverter):
     def put_text(self, text, fontname, size):
         self.write('<span style="font-family: %s; font-size:%dpx; letter-spacing:-1.2;">' %
                    (fontname, size * self.scale * self.fontscale))
-        # print self._ffont
-        # print self._ffont[1], self.scale, self.fontscale,  self._ffont[1] * self.scale * self.fontscale
         self.write_text(text)
         self.write('</span>')
 
@@ -349,14 +335,13 @@ def replace_string_to_sql_format(sql_str):
     sql_str = sql_str.replace("'", "\\'")
     return sql_str
 
-def main():
-    import argparse
 
-    description = ('Compare PDF documents using PDF Miner and print out the differences as HTML documents')
+def main():
+    description = ('Compare PDF documents using PDF Miner '
+                   'and print out the differences as HTML documents')
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument('files', nargs='*', # Use '*' to allow --changes with zero files
-                        help='compare files')
+    parser.add_argument('files', nargs='*', help='compare files')
     parser.add_argument('-o', '--output-file', default='output.html', type=str,
                         help='output file name')
 
