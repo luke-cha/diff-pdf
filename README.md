@@ -6,3 +6,6 @@
 
 # usage
 ```python diff-pdf.py before.pdf after.pdf```
+
+# output
+![image.png](https://github.com/jjunghyup/diff-pdf/blob/master/result.JPG)
