@@ -71,7 +71,7 @@ class PdfToText(object):
             pages[layout.pageid] = dictionary
         return pages
 
-    def compare_pdf(self, file1, file2, header_text, x_margin=10):
+    def compare_pdf(self, file1, file2, header_text, x_margin=10, compare_margin=0.2):
         rsrcmgr = PDFResourceManager()
         retstr = StringIO()
         laparams = LAParams()
@@ -111,7 +111,7 @@ class PdfToText(object):
 
                     for child in item:
                         if isinstance(child, LTTextLine):
-                            self.compare_textline(child, compare_page, html_coverter)
+                            self.compare_textline(child, compare_page, html_coverter, compare_margin)
                             html_coverter.put_newline()
                     html_coverter.end_div()
             html_coverter.page_end()
@@ -122,10 +122,10 @@ class PdfToText(object):
 
         return out.getvalue()
 
-    def compare_textline(self, child, compare_page, html_coverter):
+    def compare_textline(self, child, compare_page, html_coverter, compare_margin):
         comp_result = True
         for comp_textline in compare_page['textline']:
-            if child.x0 - 0.2 < comp_textline.x0 and comp_textline.x0 < child.x0 + 0.2 and child.y1 - 0.2 < comp_textline.y1 and comp_textline.y1 < child.y1 + 0.2:
+            if child.x0 - compare_margin < comp_textline.x0 and comp_textline.x0 < child.x0 + compare_margin and child.y1 - compare_margin < comp_textline.y1 and comp_textline.y1 < child.y1 + compare_margin:
                 if child.get_text() != comp_textline.get_text():
                     html_coverter.put_text_invalid(child.get_text(), child._objs[0].fontname, child._objs[0].size)
                 else:
@@ -317,11 +317,11 @@ def merge_html(output_html1, output_html2):
     return html.getvalue()
 
 
-def compare_pdf(file1, file2, output_file):
+def compare_pdf(file1, file2, output_file, compare_margin=0.2):
     pdf_reader = PdfToText()
 
-    output_html1 = pdf_reader.compare_pdf(file1, file2, 'AS-IS')
-    output_html2 = pdf_reader.compare_pdf(file2, file1, 'TO-BE', 650)
+    output_html1 = pdf_reader.compare_pdf(file1, file2, 'AS-IS', compare_margin=compare_margin)
+    output_html2 = pdf_reader.compare_pdf(file2, file1, 'TO-BE', 650, compare_margin=compare_margin)
 
     html = merge_html(output_html1, output_html2)
 
@@ -342,8 +342,8 @@ def main():
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument('files', nargs='*', help='compare files')
-    parser.add_argument('-o', '--output-file', default='output.html', type=str,
-                        help='output file name')
+    parser.add_argument('-m', '--compare-margin', default=0.2, type=float, help='object comparison margin')
+    parser.add_argument('-o', '--output-file', default='output.html', type=str, help='output file name')
 
     args = parser.parse_args()
 
@@ -355,7 +355,7 @@ def main():
     if len(args.files) != 2:
         error_message('please input two pdf files, ex) python diff-pdf.py <file1> <file2>')
     else:
-        compare_pdf(args.files[0], args.files[1], args.output_file)
+        compare_pdf(args.files[0], args.files[1], args.output_file, args.compare_margin)
 
 
 if __name__ == "__main__":
